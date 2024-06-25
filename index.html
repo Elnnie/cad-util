@@ -1,0 +1,426 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+  <link rel="stylesheet" type="text/css" href="./dist/leaflet.css">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>cad util demo</title>
+  <style>
+    body,
+    html,
+    #map {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      overflow: hidden;
+    }
+
+    span {
+      background-color: rgb(207, 207, 207);
+      /* 设置背景颜色为黄色 */
+      padding: 2px 4px;
+    }
+
+    .func1 {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 999;
+    }
+
+    .func2 {
+      position: absolute;
+      top: 40px;
+      left: 10px;
+      z-index: 999;
+    }
+
+    .func3 {
+      position: absolute;
+      top: 70px;
+      left: 10px;
+      z-index: 999;
+    }
+
+    .func4 {
+      position: absolute;
+      top: 100px;
+      left: 10px;
+      z-index: 999;
+    }
+
+    .func5 {
+      position: absolute;
+      top: 130px;
+      left: 10px;
+      z-index: 999;
+    }
+
+    .func6 {
+      position: absolute;
+      top: 160px;
+      left: 10px;
+      z-index: 999;
+    }
+  </style>
+</head>
+
+<body>
+  <!-- 0. 必须有一个id为map的元素作为容器-->
+  <div id="map"></div>
+  <div class="func1">
+    <span>底图操作:</span>
+    <button type="button" onClick="removeMapTile()">移除底图</button>
+    <button type="button" onClick="addMapTile()">添加底图</button>
+  </div>
+  <div class="func2">
+    <span>地图侧操作:</span>
+    <button type="button" onClick="highlight()">高亮</button>
+    <button type="button" onClick="clearHighlight()">清除高亮</button>
+    <button type="button" onClick="hideEntityById()">隐藏单体</button>
+    <button type="button" onClick="showEntityById()">显示单体</button>
+    <!-- <button type="button" onClick="removeEntityById()">移除单体</button> -->
+    <button type="button" onClick="hideLayerById()">隐藏单个图层</button>
+    <button type="button" onClick="showLayerById()">显示单个图层</button>
+    <!-- <button type="button" onClick="removeLayerById()">移除图层</button> -->
+    <button type="button" onClick="hideAllLayers()">隐藏所有图层</button>
+    <button type="button" onClick="showAllLayers()">显示所有图层</button>
+  </div>
+  <div class="func3">
+    <span>图层侧操作:</span>
+    <button type="button" onClick="hideEntity()">隐藏图斑</button>
+    <button type="button" onClick="showEntity()">显示图斑</button>
+    <button type="button" onClick="removeEntity()">移除图斑</button>
+    <button type="button" onClick="hideMarker()">隐藏文字</button>
+    <button type="button" onClick="showMarker()">显示文字</button>
+    <button type="button" onClick="removeMarker()">移除文字</button>
+    <button type="button" onClick="hide()">全部隐藏</button>
+    <button type="button" onClick="show()">全部显示</button>
+    <button type="button" onClick="remove()">全部移除</button>
+  </div>
+  <div class="func4">
+    <span>地图操作单体:</span>
+    <button type="button" onClick="fly()">定位单体</button>
+    <button type="button" onClick="startEdit()">开始编辑单体</button>
+    <button type="button" onClick="startDrag()">开始移动单体</button>
+    <button type="button" onClick="onDelete()">删除单体</button>
+    <button type="button" onClick="popDelete()">撤销上个删除</button>
+    <button type="button" onClick="cancel()">取消改动</button>
+    <button type="button" onClick="save()">保存改动</button>
+  </div>
+  <div class="func5">
+    <span>操作单体:</span>
+    <button type="button" onClick="entityHighlight()">高亮</button>
+    <button type="button" onClick="entityClearHighlight()">取消高亮</button>
+    <button type="button" onClick="entityStartEdit()">进入编辑</button>
+    <button type="button" onClick="entityStartDrag()">进入移动</button>
+    <button type="button" onClick="entityCancel()">取消编辑/移动</button>
+    <button type="button" onClick="entitySave()">保存编辑/移动</button>
+    <button type="button" onClick="entityDel()">删除(不可撤销)</button>
+    <button type="button" onClick="entityHide()">隐藏</button>
+    <button type="button" onClick="entityShow()">显示</button>
+  </div>
+  <div class="func6">
+    <span>组合操作:</span>
+    <button type="button" onClick="addClick()">添加单体点击事件(以高亮为例)</button>
+    <button type="button" onClick="removeClick()">移除单体点击事件</button>
+    <button type="button" onClick="layerChange()">地上/地下建筑图层切换</button>
+    <button type="button" onClick="getUpdateOpts()">获取更新单体列表</button>
+    <button type="button" onClick="getDelOpts()">获取删除单体列表</button>
+  </div>
+  <script src="./dist/cad-util.umd.cjs"></script>
+  <script>
+
+    // #start ✨ 地图搭建 ✨ ------------------------------------------------------------------------
+    // 1.创建地图map
+    const map = new CADUtil.Map();
+
+    // 2.添加底图
+    const mapTile1 = new CADUtil.MapTile('http://fxpc.mem.gov.cn/data_preparation/a12eadf6-1a57-43fe-9054-2e22277bd553/4eb4b664-5633-4ab3-b0fd-345829dd3a87/wmts?service=WMTS&request=GetTile&version=1.0.0&style=default&tilematrixSet=c&format=tiles&width=256&height=256&layer=img&tilematrix={z}&tilerow={y}&tilecol={x}&sgeokey=6254e1f705474d6fdba2a4ca77dd5f34');
+    const mapTile2 = new CADUtil.MapTile('http://fxpc.mem.gov.cn/data_preparation/a12eadf6-1a57-43fe-9054-2e22277bd553/4eb4b664-5633-4ab3-b0fd-345829dd3a87/wmts?service=WMTS&request=GetTile&version=1.0.0&style=default&tilematrixSet=c&format=tiles&width=256&height=256&layer=cia&tilematrix={z}&tilerow={y}&tilecol={x}&sgeokey=6254e1f705474d6fdba2a4ca77dd5f34');
+    mapTile1.addTo(map);
+    mapTile2.addTo(map);
+
+    // 3.视角定位
+    map.setView(119.010240221060637, 33.008408228599373, 18)
+
+    // 4.移除底图
+    function removeMapTile() {
+      mapTile2.remove();
+    }
+
+    // 5.添加底图
+    function addMapTile() {
+      mapTile2.addTo(map);
+    }
+    // #end ✨ 地图搭建 ✨ ----------------------------------------------------------------------------
+
+    // #start ✨ 单体展示 ✨ ------------------------------------------------------------------------
+    // 1.通过数据添加单体(假设geoLayer1为地上建筑图层,geoLayer2为地下建筑图层)
+    const geoLayer1 = new CADUtil.GeoLayer();
+    geoLayer1.addTo(map);
+    const geoLayer2 = new CADUtil.GeoLayer();
+    geoLayer2.addTo(map);
+    const geoData1 = { type: "Polygon", coordinates: [[[119.009240221060637, 33.008478228599373, 0.002265881747007], [119.011218488584049, 33.008359195510231, 0.002265861257911], [119.011111888774423, 33.006446194369246, 0.002265491522849], [119.009102109649561, 33.006461919554745, 0.002265493385494], [119.009240221060637, 33.008478228599373, 0.002265881747007]]] }
+    const geoData2 = { type: "Polygon", coordinates: [[[119.011032279087885, 33.00813477581525, 0.00226582121104], [119.010994774594408, 33.007694452179166, 0.002265732735395], [119.010511518606023, 33.007723672612606, 0.002265739254653], [119.010553489260118, 33.008216462816115, 0.002265834249556], [119.010974498825746, 33.008191006310931, 0.002265830524266], [119.011032279087885, 33.00813477581525, 0.00226582121104]]] }
+    const geoStyle1 = {
+      fillColor: '#ff0000',
+      fillOpacity: 0.1,
+      weight: 3,
+      color: '#ff0000'
+    }
+    const geoStyle2 = {
+      fillColor: '#FFEC79',
+      fillOpacity: 0.8,
+      weight: 2,
+      color: '#FFEC79'
+    }
+    const uuid1 = '11111111';
+    const uuid2 = '22222222';
+    geoLayer1.addData(uuid1, geoData1, '', '', geoStyle1);
+    geoLayer2.addData(uuid2, geoData2, '12#楼', '#ffffff', geoStyle2);
+    const highlightStyle = {
+      fillColor: '#00F0FF',
+      fillOpacity: 0.5,
+      weight: 3,
+      color: '#00F0FF'
+    }
+
+    // #start ✨ 地图侧操作 ✨ --------------------------------------------------
+    // 1.根据id高亮单体
+    function highlight() {
+      map.highlight(uuid1, highlightStyle)
+    }
+
+    // 2.根据id清除单体高亮
+    function clearHighlight() {
+      map.clearHighlight(uuid1)
+    }
+
+    // 3.根据id隐藏单体
+    function hideEntityById() {
+      map.hideEntityById(uuid2);
+    }
+
+    // 4.根据id显示单体
+    function showEntityById() {
+      map.showEntityById(uuid2);
+    }
+
+    // 5.根据id移除单体
+    function removeEntityById() {
+      map.removeEntityById(uuid2);
+    }
+
+    // 6.根据id隐藏图层
+    function hideLayerById() {
+      map.hideLayerById(geoLayer1.id);
+    }
+
+    // 7.根据id显示图层
+    function showLayerById() {
+      map.showLayerById(geoLayer1.id);
+    }
+
+    // 5.根据id移除图层
+    function removeLayerById() {
+      map.removeLayerById(geoLayer1.id);
+    }
+
+    // 6.隐藏所有图层
+    function hideAllLayers() {
+      map.hideAllLayers();
+    }
+
+    // 7.显示所有图层
+    function showAllLayers() {
+      map.showAllLayers();
+    }
+    // #end ✨ 地图侧操作 ✨----------------------------------------------------
+    // #start ✨ 图层侧操作 ✨--------------------------------------------------
+    // 1.隐藏图层图斑
+    function hideEntity() {
+      geoLayer2.hideEntities();
+    }
+
+    // 2.显示图层图斑
+    function showEntity() {
+      geoLayer2.showEntities();
+    }
+
+    // 3.移除图层图斑
+    function removeEntity() {
+      geoLayer2.removeEntities();
+    }
+
+    // 4.隐藏图层文字
+    function hideMarker() {
+      geoLayer2.hideMarkers();
+    }
+
+    // 5.显示图层文字
+    function showMarker() {
+      geoLayer2.showMarkers();
+    }
+
+    // 6.移除图层文字
+    function removeMarker() {
+      geoLayer2.removeMarkers();
+    }
+
+    // 7.全部隐藏图层
+    function hide() {
+      geoLayer2.hide();
+    }
+
+    // 8.全部显示图层
+    function show() {
+      geoLayer2.show();
+    }
+
+    // 9.移除显示图层
+    function remove() {
+      geoLayer2.remove();
+    }
+    // #start ✨ 图层侧操作 ✨ --------------------------------------------------
+    // #end ✨ 单体展示 ✨ ----------------------------------------------------------------------------
+
+    // #start ✨ 地图操作单体 ✨ ------------------------------------------------------------------------
+    // 1.根据id定位单体
+    function fly() {
+      map.flyTo(uuid2)
+    }
+
+    // 2.开始编辑单体
+    function startEdit() {
+      map.edit(uuid2)
+    }
+
+    // 3.开始移动单体
+    function startDrag() {
+      map.drag(uuid2)
+    }
+
+    // 4.删除单体
+    function onDelete() {
+      map.delete(uuid2, id => { console.log('删除的单体id', id); });
+      map.delete(uuid1, id => { console.log('删除的单体id', id); });
+    }
+
+    // 5.撤销上个删除
+    function popDelete() {
+      map.popDelete(id => { console.log('撤销删除的单体id', id); })
+    }
+
+    // 6.取消改动
+    function cancel() {
+      map.cancel(uuid2)
+    }
+
+    // 7.保存改动
+    function save() {
+      map.save(uuid2, (id, obj) => { console.log('改动的id', id, '改动后的单体信息', obj); });
+    }
+    // #end ✨ 地图操作单体 ✨ ------------------------------------------------------------------------
+
+    // #start ✨ 操作单体 ✨ ------------------------------------------------------------------------
+    // 1.通过地图方式获取单体对象
+    // ❗️❗️❗️注意：通过单体操作的方式,不会同步记录在地图的操作列表中,每次操作需要自己执行对应方法
+    // 如果需要自动记录所有的改动,请使用地图map对象进行操作,参照 #start ✨ 地图侧操作 ✨ 这部分示例❗️❗️❗️
+    const e1 = map.getEntityById(uuid1);
+
+    // 2.单体高亮
+    function entityHighlight() {
+      e1.highlight(highlightStyle);
+    }
+
+    // 3.取消高亮
+    function entityClearHighlight() {
+      e1.clearHighlight();
+    }
+
+    // 4.进入编辑
+    function entityStartEdit() {
+      e1.startEdit();
+    }
+
+    // 5.进入移动
+    function entityStartDrag() {
+      e1.startDrag();
+    }
+
+    // 6.取消编辑 / 移动
+    function entityCancel() {
+      e1.cancel();
+    }
+
+    // 7.保存编辑 / 移动
+    function entitySave() {
+      e1.save(obj => { console.log('保存后的单体信息', obj); });
+    }
+
+    // 8.删除(不可撤销)
+    function entityDel() {
+      e1.delete();
+    }
+
+    // 9.隐藏
+    function entityHide() {
+      e1.hide();
+    }
+
+    // 10.显示
+    function entityShow() {
+      e1.show();
+    }
+    // #end ✨ 操作单体 ✨ ------------------------------------------------------------------------
+
+    // #start ✨ 功能组合实例 ✨ ------------------------------------------------------------------------
+    // 1.添加单体的点击事件和回调
+    function addClick() {
+      let e;
+      map.addClick(entity => {
+        e && e.clearHighlight();
+        e = entity;
+        e.highlight(highlightStyle)
+      })
+    }
+
+    // 2.移除点击事件
+    function removeClick() {
+      map.removeClick()
+    }
+
+    // 3.通过单体id切换地上/地下建筑显示示例
+    let flag = true;
+    function layerChange() {
+      // 根据单体id获取单体对象
+      let entity = map.getEntityById(flag ? uuid1 : uuid2);
+      // 获取单体对应的图层id
+      let layerID = entity.layerID;
+      // 隐藏所有图层
+      map.hideAllLayers();
+      // 单独显示该单体所在的图层
+      map.showLayerById(layerID);
+      flag = !flag;
+    }
+
+    // 4.获取地图需要更新的单体列表
+    function getUpdateOpts() {
+      console.log(map.getUpdateList());
+      // 然后进行数据库处理
+    }
+
+    // 5.获取地图需要删除的单体列表
+    function getDelOpts() {
+      console.log(map.getDeleteList());
+      // 然后进行数据库处理
+    }
+    // #end ✨ 功能组合实例 ✨ ------------------------------------------------------------------------
+  </script>
+</body>
+
+</html>
